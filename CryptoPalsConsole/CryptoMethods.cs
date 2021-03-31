@@ -173,6 +173,21 @@ namespace CryptoPalsConsole
                 }
             }
         }
+
+        public static byte[] PKCS7Padding(int blockSize, int dataLength)
+        {
+            var padding = new List<byte>();
+
+            int paddingNumber = blockSize - dataLength;
+
+            while(padding.Count < paddingNumber)
+            {
+                padding.Add(Convert.ToByte(paddingNumber));
+            }
+
+            return padding.ToArray();
+        }
+
         #region Helper Methods
 
         private static void SaveBestScoreKeyLength(List<KeyValuePair<int, float>> keys, int numberOfKeys, KeyValuePair<int, float> anotherKey)

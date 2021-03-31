@@ -6,7 +6,7 @@ using System.Text;
 
 namespace CryptoPalsConsole
 {
-    public class Set1
+    public class Set1 : BaseSet
     {
         public Set1()
         {
@@ -212,18 +212,6 @@ namespace CryptoPalsConsole
                 return count;
             }
             return 0;
-        }
-
-        private void CheckResult(string result, string expected)
-        {
-            if(result.Equals(expected))
-            {
-                Console.WriteLine("Success");
-            }
-            else
-            {
-                Console.WriteLine("Fail");
-            }
         }
     }
 }
