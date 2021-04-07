@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
+using System.IO;
+using System.Security.Cryptography;
 
 namespace CryptoPalsConsole
 {
@@ -26,6 +27,24 @@ namespace CryptoPalsConsole
             var result = data + Conversion.BytesToHexString(resultBytes);
 
             CheckResult(result, expected);
+        }
+
+
+        public void Challenge10()
+        {
+            Console.WriteLine("Challenge 10");
+            var key = "YELLOW SUBMARINE";
+            var iv = "0000000000000000";
+            var keyBytes = Conversion.AsciiToBytes(key);
+            var ivBytes = Conversion.AsciiToBytes(iv);
+            var dataBytes = Conversion.Base64StringToBytes(File.ReadAllText("Set2Challenge10.txt"));
+            var blocks = CryptoMethods.BreakIntoBlocks(dataBytes, 16);
+
+            var decrypted = CryptoMethods.DecryptAesCBC(blocks, keyBytes, ivBytes);
+
+            var decryptedTxt = Conversion.BytesToAsciiString(decrypted);
+            Console.WriteLine(decryptedTxt);
+            Console.WriteLine("Success");
         }
 
         #endregion

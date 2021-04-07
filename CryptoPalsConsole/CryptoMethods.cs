@@ -143,15 +143,46 @@ namespace CryptoPalsConsole
             return blocks.ToArray();
         }
 
-        public static byte[] DecryptAes(byte[] cipher, byte[] key, CipherMode cipherMode)
+        public static byte[] EncryptAes(byte[] plainBytes, byte[] key, CipherMode cipherMode, PaddingMode padding)
         {
             // Create an Aes object
             // with the specified key and IV.
             using (Aes aesAlg = Aes.Create())
             {
                 aesAlg.Key = key; ;
-                aesAlg.Mode = CipherMode.ECB;
-                aesAlg.Padding = PaddingMode.Zeros;
+                aesAlg.Mode = cipherMode;
+                aesAlg.Padding = padding;
+
+                // Create a encryptor to perform the stream transform.
+                ICryptoTransform encryptor = aesAlg.CreateEncryptor(aesAlg.Key, aesAlg.IV);
+
+                // Create the streams used for encryption.
+                using (MemoryStream msEncrypt = new MemoryStream(plainBytes))
+                {
+                    using (CryptoStream csEncrypt = new CryptoStream(msEncrypt, encryptor, CryptoStreamMode.Read))
+                    {
+                        int b = csEncrypt.ReadByte();
+                        var bytes = new List<byte>();
+                        while (b != -1)
+                        {
+                            bytes.Add(Convert.ToByte(b));
+                            b = csEncrypt.ReadByte();
+                        }
+                        return bytes.ToArray();
+                    }
+                }
+            }
+        }
+
+        public static byte[] DecryptAes(byte[] cipher, byte[] key, CipherMode cipherMode, PaddingMode padding)
+        {
+            // Create an Aes object
+            // with the specified key and IV.
+            using (Aes aesAlg = Aes.Create())
+            {
+                aesAlg.Key = key; ;
+                aesAlg.Mode = cipherMode;
+                aesAlg.Padding = padding;
 
                 // Create a decryptor to perform the stream transform.
                 ICryptoTransform decryptor = aesAlg.CreateDecryptor(aesAlg.Key, aesAlg.IV);
@@ -174,13 +205,46 @@ namespace CryptoPalsConsole
             }
         }
 
+        public static byte[] DecryptAesCBC(byte[][] blocks, byte[] key, byte[] iv)
+        {
+            var decrypted = new List<byte>();
+            bool first = true;
+            foreach (var block in blocks)
+            {
+                var decrypt = DecryptAes(block, key, CipherMode.ECB, PaddingMode.None);
+                if (first)
+                {
+                    decrypted.AddRange(decrypt);
+                    first = false;
+                }
+                else
+                {
+                    var xored = EncryptRepeatingXor(decrypt, iv);
+                    decrypted.AddRange(xored);
+                }
+
+                iv = block;
+            }
+            return decrypted.ToArray();
+        }
+
         public static byte[] PKCS7Padding(int blockSize, int dataLength)
         {
             var padding = new List<byte>();
+            int paddingNumber = 0;
+            if (dataLength > blockSize)
+            {
+                while((paddingNumber + dataLength) % blockSize != 0)
+                {
+                    paddingNumber++;
+                }
+            }
+            else
+            {
+                paddingNumber = blockSize % dataLength;
+            }
 
-            int paddingNumber = blockSize - dataLength;
-
-            while(padding.Count < paddingNumber)
+            while (padding.Count < paddingNumber)
             {
                 padding.Add(Convert.ToByte(paddingNumber));
             }

@@ -162,9 +162,8 @@ namespace CryptoPalsConsole
             var key = "YELLOW SUBMARINE";
             var fileText = File.ReadAllText("Set1Challenge7.txt");
             var encrypted = Conversion.Base64StringToBytes(fileText);
-            var hexstring = Conversion.BytesToHexString(encrypted);
 
-            var decryptedBytes = CryptoMethods.DecryptAes(encrypted, Conversion.AsciiToBytes(key), CipherMode.ECB);
+            var decryptedBytes = CryptoMethods.DecryptAes(encrypted, Conversion.AsciiToBytes(key), CipherMode.ECB, PaddingMode.Zeros);
             Console.WriteLine($"The Message: {Conversion.BytesToAsciiString(decryptedBytes)}");
             Console.WriteLine("Success if the message is readable");
         }
