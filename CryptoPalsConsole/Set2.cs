@@ -14,6 +14,8 @@ namespace CryptoPalsConsole
             Challenge9();
             Console.WriteLine();
             Challenge10();
+            Console.WriteLine();
+            Challenge11();
         }
 
         #region Chgallenges
@@ -38,13 +40,42 @@ namespace CryptoPalsConsole
             var keyBytes = Conversion.AsciiToBytes(key);
             var ivBytes = Conversion.AsciiToBytes(iv);
             var dataBytes = Conversion.Base64StringToBytes(File.ReadAllText("Set2Challenge10.txt"));
-            var blocks = CryptoMethods.BreakIntoBlocks(dataBytes, 16);
 
-            var decrypted = CryptoMethods.DecryptAesCBC(blocks, keyBytes, ivBytes);
+            var decrypted = CryptoMethods.DecryptAesCBC(dataBytes, keyBytes, ivBytes);
 
             var decryptedTxt = Conversion.BytesToAsciiString(decrypted);
             Console.WriteLine(decryptedTxt);
             Console.WriteLine("Success");
+        }
+
+        public void Challenge11()
+        {
+            Console.WriteLine("Challenge 11");
+            for(int i = 0; i < 1000; i++)
+            {
+                var dataBytes = File.ReadAllBytes("Set2Challenge11.txt");
+                byte[] encryption;
+                var mode = CryptoMethods.RandomEncryption(dataBytes, out encryption);
+                byte[] mostRepeatedBlock;
+                int maxRepeated = CryptoMethods.NumberOfRepeatedBlocks(encryption, out mostRepeatedBlock);
+                if(maxRepeated > 1)
+                {
+                    if(mode == CipherMode.CBC)
+                    {
+                        Console.WriteLine("Failed to Detect CBC --> " + maxRepeated);
+                    }
+                    else
+                    {
+                        Console.WriteLine("EBC Mode: Repeated Blocks --> " + maxRepeated);
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("CBC Mode: Repeated Blocks --> " + maxRepeated);
+                }
+            }
+            
+
         }
 
         #endregion

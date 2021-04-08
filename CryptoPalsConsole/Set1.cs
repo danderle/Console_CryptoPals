@@ -163,7 +163,7 @@ namespace CryptoPalsConsole
             var fileText = File.ReadAllText("Set1Challenge7.txt");
             var encrypted = Conversion.Base64StringToBytes(fileText);
 
-            var decryptedBytes = CryptoMethods.DecryptAes(encrypted, Conversion.AsciiToBytes(key), CipherMode.ECB, PaddingMode.Zeros);
+            var decryptedBytes = CryptoMethods.DecryptAes(encrypted, Conversion.AsciiToBytes(key), CipherMode.ECB, PaddingMode.None);
             Console.WriteLine($"The Message: {Conversion.BytesToAsciiString(decryptedBytes)}");
             Console.WriteLine("Success if the message is readable");
         }
@@ -171,46 +171,27 @@ namespace CryptoPalsConsole
         public void Challenge8()
         {
             Console.WriteLine("Challenge 8");
-            var fileText = File.ReadAllText("Set1Challenge8.txt").Replace("\r", "").Replace("\n","");
-            var encrypted = Conversion.HexStringToBytes(fileText);
-            var blocks = CryptoMethods.BreakIntoBlocks(encrypted, 16);
-            var bytes = new byte[16];
-            int mostMatches = 0;
-            for(int blockIndex = 0; blockIndex < blocks.Length; blockIndex++)
+            var fileLines = File.ReadAllLines("Set1Challenge8.txt");
+            int maxRepeated = 0;
+            string ebcLine = string.Empty;
+            foreach(var line in fileLines)
             {
-                int matches = 0;
-                for (int othersIndex = 0; othersIndex < blocks.Length; othersIndex++)
+                line.Replace("\r", "").Replace("\n", "");
+                var encrypted = Conversion.HexStringToBytes(line);
+                byte[] mostRepeated;
+                var repeated = CryptoMethods.NumberOfRepeatedBlocks(encrypted, out mostRepeated);
+                if(repeated > maxRepeated)
                 {
-                    if (blockIndex != othersIndex)
-                    {
-                         matches += AreEqual(blocks[blockIndex], blocks[othersIndex]);
-                        if(matches > mostMatches)
-                        {
-                            mostMatches = matches;
-                            bytes = blocks[blockIndex];
-                        }
-                    }
+                    maxRepeated = repeated;
+                    ebcLine = line;
                 }
             }
 
             Console.WriteLine("Repeated Block");
-            Console.WriteLine(Conversion.BytesToHexString(bytes));
+            Console.WriteLine(ebcLine);
         }
 
         #endregion
 
-        private int AreEqual(byte[] a, byte[] b)
-        {
-            int count = 0;
-            if(a.Length == b.Length)
-            {
-                for(int i = 0; i < a.Length; i++)
-                {
-                    count += a[i] == b[i] ? 1 : 0;
-                }
-                return count;
-            }
-            return 0;
-        }
     }
 }

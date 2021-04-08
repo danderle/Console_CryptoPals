@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
-using System.Text;
 
 namespace CryptoPalsConsole
 {
     static class CryptoMethods
     {
+        #region Xor
+
         public static byte Xor(byte a, byte b)
         {
             return Convert.ToByte(a ^ b);
@@ -70,6 +71,33 @@ namespace CryptoPalsConsole
             return result.ToArray();
         }
 
+
+        public static int[] GetPossibleXorKeySize(int smallestKey, int largestKey, int numberOfKeys, byte[] data)
+        {
+            var keys = new List<KeyValuePair<int, float>>();
+            for (int keySize = smallestKey; keySize < largestKey; keySize++)
+            {
+                var chunks1 = GetKeySizeChunks(keySize, 0, data);
+                var chunks2 = GetKeySizeChunks(keySize, keySize, data);
+
+                float score = NormalizedHammingDistance(chunks1.ToArray(), chunks2.ToArray(), keySize);
+                var anotherKey = new KeyValuePair<int, float>(keySize, score);
+                SaveBestScoreKeyLength(keys, numberOfKeys, anotherKey);
+            }
+            var keySizes = new int[keys.Count];
+            int index = 0;
+            foreach (var key in keys)
+            {
+                keySizes[index] = key.Key;
+                index++;
+            }
+            return keySizes;
+        }
+
+        #endregion
+
+        #region Hamming Distance
+
         public static int HammingDistance(byte a, byte b)
         {
             byte result = Convert.ToByte(a ^ b);
@@ -105,27 +133,9 @@ namespace CryptoPalsConsole
             return score;
         }
 
-        public static int[] GetPossibleXorKeySize(int smallestKey, int largestKey, int numberOfKeys, byte[] data)
-        {
-            var keys = new List<KeyValuePair<int, float>>();
-            for(int keySize = smallestKey; keySize < largestKey; keySize++)
-            {
-                var chunks1 = GetKeySizeChunks(keySize, 0, data);
-                var chunks2 = GetKeySizeChunks(keySize, keySize, data);
+        #endregion
 
-                float score = NormalizedHammingDistance(chunks1.ToArray(), chunks2.ToArray(), keySize);
-                var anotherKey = new KeyValuePair<int, float>(keySize, score);
-                SaveBestScoreKeyLength(keys, numberOfKeys, anotherKey);
-            }
-            var keySizes = new int[keys.Count];
-            int index = 0;
-            foreach(var key in keys)
-            {
-                keySizes[index] = key.Key;
-                index++;
-            }
-            return keySizes;
-        }
+        #region Blocks
 
         public static byte[][] BreakIntoBlocks(byte[] data, int blockSize)
         {
@@ -142,6 +152,78 @@ namespace CryptoPalsConsole
             }
             return blocks.ToArray();
         }
+
+        public static int NumberOfRepeatedBlocks(byte[] encrypted, out byte[] mostRepeatedBlock)
+        {
+            var blocks = BreakIntoBlocks(encrypted, 16);
+            mostRepeatedBlock = null;
+            int mostMatches = 0;
+            for (int blockIndex = 0; blockIndex < blocks.Length; blockIndex++)
+            {
+                int matches = 0;
+                for (int othersIndex = 0; othersIndex < blocks.Length; othersIndex++)
+                {
+                    if (blockIndex != othersIndex)
+                    {
+                        matches += AreEqual(blocks[blockIndex], blocks[othersIndex]);
+                        if (matches > mostMatches)
+                        {
+                            mostMatches = matches;
+                            mostRepeatedBlock = blocks[blockIndex];
+                        }
+                    }
+                }
+            }
+            return mostMatches;
+        }
+
+        #endregion
+
+        #region Aes
+
+        public static byte[] RandomBytes(int length)
+        {
+            var rand = new Random();
+            var bytes = new byte[length];
+            rand.NextBytes(bytes);
+            return bytes;
+        }
+
+        public static CipherMode RandomEncryption(byte[] plain, out byte[] encryption)
+        {
+            var rand = new Random();
+            var numberOfAppendedBytes = rand.Next(5, 11);
+            var front = RandomBytes(numberOfAppendedBytes);
+            var rear = RandomBytes(numberOfAppendedBytes);
+            var mode = rand.Next(0, 2);
+            var key = RandomBytes(16);
+            var iv = RandomBytes(16);
+            var plainBytes = new List<byte>();
+            plainBytes.AddRange(front);
+            plainBytes.AddRange(plain);
+            plainBytes.AddRange(rear);
+            var paddedBytes = PKCS7Padding(plainBytes.ToArray(), 16);
+
+            switch(mode)
+            {
+                case 0:
+                    encryption = EncryptAes(paddedBytes, key, CipherMode.ECB, PaddingMode.None);
+                    return CipherMode.ECB;
+                case 1:
+                    encryption = EncryptAesCBC(paddedBytes, key, iv);
+                    return CipherMode.CBC;
+                default:
+                    encryption = null;
+                    return CipherMode.CTS;
+            }
+        }
+
+        public static int AesModeDetection(byte[] encryption)
+        {
+            return 1;
+        }
+
+        #region EBC
 
         public static byte[] EncryptAes(byte[] plainBytes, byte[] key, CipherMode cipherMode, PaddingMode padding)
         {
@@ -194,7 +276,7 @@ namespace CryptoPalsConsole
                     {
                         int b = csDecrypt.ReadByte();
                         var bytes = new List<byte>();
-                        while(b != -1)
+                        while (b != -1)
                         {
                             bytes.Add(Convert.ToByte(b));
                             b = csDecrypt.ReadByte();
@@ -205,10 +287,41 @@ namespace CryptoPalsConsole
             }
         }
 
-        public static byte[] DecryptAesCBC(byte[][] blocks, byte[] key, byte[] iv)
+        #endregion
+
+        #region CBC
+
+        public static byte[] EncryptAesCBC(byte[] plain, byte[] key, byte[] iv)
+        {
+            var padded = PKCS7Padding(plain, 16);
+            var blocks = BreakIntoBlocks(padded, 16);
+            var encrypted = new List<byte>();
+            bool first = true;
+
+            foreach (var block in blocks)
+            {
+                var xored = Xor(block, iv);
+                var encryptedBlock = EncryptAes(xored, key, CipherMode.ECB, PaddingMode.None);
+                if (first)
+                {
+                    encryptedBlock = EncryptAes(block, key, CipherMode.ECB, PaddingMode.None);
+                    encrypted.AddRange(encryptedBlock);
+                    first = false;
+                }
+                else
+                {
+                    encrypted.AddRange(encryptedBlock);
+                }
+                iv = encryptedBlock;
+            }
+            return encrypted.ToArray();
+        }
+
+        public static byte[] DecryptAesCBC(byte[] cipher, byte[] key, byte[] iv)
         {
             var decrypted = new List<byte>();
             bool first = true;
+            var blocks = BreakIntoBlocks(cipher, 16);
             foreach (var block in blocks)
             {
                 var decrypt = DecryptAes(block, key, CipherMode.ECB, PaddingMode.None);
@@ -228,13 +341,19 @@ namespace CryptoPalsConsole
             return decrypted.ToArray();
         }
 
+        #endregion
+
+        #endregion
+
+        #region Padding
+
         public static byte[] PKCS7Padding(int blockSize, int dataLength)
         {
             var padding = new List<byte>();
             int paddingNumber = 0;
             if (dataLength > blockSize)
             {
-                while((paddingNumber + dataLength) % blockSize != 0)
+                while ((paddingNumber + dataLength) % blockSize != 0)
                 {
                     paddingNumber++;
                 }
@@ -251,6 +370,34 @@ namespace CryptoPalsConsole
 
             return padding.ToArray();
         }
+
+        public static byte[] PKCS7Padding(byte[] dataToPad, int blockSize)
+        {
+            var padded = new List<byte>();
+            int paddingNumber = 0;
+            int dataLength = dataToPad.Length;
+            if (dataLength > blockSize)
+            {
+                while ((paddingNumber + dataLength) % blockSize != 0)
+                {
+                    paddingNumber++;
+                }
+            }
+            else
+            {
+                paddingNumber = blockSize % dataLength;
+            }
+            padded.AddRange(dataToPad);
+            byte[] padding = new byte[paddingNumber];
+            for(int i = 0; i < padding.Length; i++)
+            {
+                padding[i] = Convert.ToByte(paddingNumber);
+            }
+            padded.AddRange(padding);
+
+            return padded.ToArray();
+        }
+        #endregion
 
         #region Helper Methods
 
@@ -303,6 +450,24 @@ namespace CryptoPalsConsole
                 }
             }
             return chunks;
+        }
+
+
+        private static int AreEqual(byte[] a, byte[] b)
+        {
+            int count = 0;
+            if (a.Length == b.Length)
+            {
+                for (int i = 0; i < a.Length; i++)
+                {
+                    count += a[i] == b[i] ? 1 : 0;
+                }
+            }
+            if(count == a.Length)
+            {
+                return 1;
+            }
+            return 0;
         }
 
         #endregion
