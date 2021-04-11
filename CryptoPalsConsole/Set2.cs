@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
 
@@ -51,30 +50,47 @@ namespace CryptoPalsConsole
         public void Challenge11()
         {
             Console.WriteLine("Challenge 11");
-            for(int i = 0; i < 1000; i++)
+            var dataText = File.ReadAllText("Set2Challenge11.txt").Replace("\r","").Replace("\n", "");
+            int failCount = 0;
+            int succesCount = 0;
+            for (int i = 0; i < 1000; i++)
             {
-                var dataBytes = File.ReadAllBytes("Set2Challenge11.txt");
+                var dataBytes = Conversion.AsciiToBytes(dataText);
                 byte[] encryption;
                 var mode = CryptoMethods.RandomEncryption(dataBytes, out encryption);
                 byte[] mostRepeatedBlock;
                 int maxRepeated = CryptoMethods.NumberOfRepeatedBlocks(encryption, out mostRepeatedBlock);
-                if(maxRepeated > 1)
+
+                if(maxRepeated >= 1)
                 {
                     if(mode == CipherMode.CBC)
                     {
-                        Console.WriteLine("Failed to Detect CBC --> " + maxRepeated);
+                        Console.WriteLine("Failed to Detect CBC --> " + maxRepeated + " *****Fail******");
+                        failCount++;
                     }
                     else
                     {
-                        Console.WriteLine("EBC Mode: Repeated Blocks --> " + maxRepeated);
+                        Console.WriteLine("EBC Mode: Repeated Blocks --> " + maxRepeated + " Success");
+                        succesCount++;
                     }
                 }
                 else
                 {
-                    Console.WriteLine("CBC Mode: Repeated Blocks --> " + maxRepeated);
+                    if (mode == CipherMode.ECB)
+                    {
+                        Console.WriteLine("Failed to Detect ECB --> " + maxRepeated + " *****Fail******");
+                        failCount++;
+                    }
+                    else
+                    {
+                        Console.WriteLine("CBC Mode: Repeated Blocks --> " + maxRepeated + " Success");
+                        succesCount++;
+                    }
                 }
             }
-            
+
+            Console.WriteLine($"Success count: {succesCount}");
+            Console.WriteLine($"fail count: {failCount}");
 
         }
 
