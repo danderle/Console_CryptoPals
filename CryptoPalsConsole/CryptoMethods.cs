@@ -223,6 +223,33 @@ namespace CryptoPalsConsole
             return 1;
         }
 
+        public static int GetAesEncryptionBlockSize(byte[] plainBytes, byte[] key, out byte[] encryption)
+        {
+            int blockSize = 0;
+            int encryptionSize = 0;
+            var textAddition = string.Empty;
+            encryption = null;
+            var plain = plainBytes.ToList();
+            while (blockSize == 0)
+            {
+                var textAdditionBytes = Conversion.AsciiToBytes(textAddition);
+                plain.AddRange(textAdditionBytes);
+                var paddedPlainBytes = PKCS7Padding(plain.ToArray(), 16);
+                var encrypt = EncryptAes(paddedPlainBytes, key, CipherMode.ECB, PaddingMode.None);
+                if (encryptionSize == 0)
+                {
+                    encryption = encrypt;
+                    encryptionSize = encrypt.Length;
+                }
+                else if (encryptionSize < encrypt.Length)
+                {
+                    blockSize = encrypt.Length - encryptionSize;
+                }
+                textAddition += "A";
+            }
+            return blockSize;
+        }
+
         #region EBC
 
         public static byte[] EncryptAes(byte[] plainBytes, byte[] key, CipherMode cipherMode, PaddingMode padding)
@@ -285,6 +312,50 @@ namespace CryptoPalsConsole
                     }
                 }
             }
+        }
+
+        public static byte[] BruteForceAesECBEncryption(byte[][] plainByteBlocks, byte[] key, int blockSize)
+        {
+            var decryptedBytes = new List<byte>();
+            var decrypted = new List<byte>();
+            foreach (var block in plainByteBlocks)
+            {
+                for (int i = 0; i < blockSize; i++)
+                {
+                    var knownBytes = Enumerable.Repeat(Convert.ToByte(0), blockSize - 1).ToArray();
+                    var plainBytes = knownBytes.ToList();
+                    var trimmedBlock = block.ToList();
+                    trimmedBlock.RemoveRange(0, decryptedBytes.Count);
+                    plainBytes.AddRange(trimmedBlock);
+                    plainBytes.RemoveRange(16, plainBytes.Count - 16);
+                    var encryption = EncryptAes(plainBytes.ToArray(), key, CipherMode.ECB, PaddingMode.None);
+                    var bruteForceByte = BruteForceAesByte(encryption, key, blockSize);
+                    decryptedBytes.Add(bruteForceByte);
+                }
+                decrypted.AddRange(decryptedBytes);
+                decryptedBytes.Clear();
+            }
+            return decrypted.ToArray();
+        }
+
+        public static byte BruteForceAesByte(byte[] encryption, byte[] key, int blockSize)
+        {
+            var encryptedBlock = new byte[16];
+            Array.Copy(encryption, 0, encryptedBlock, 0, 16);
+            byte testByte = 0x00;
+            while (true)
+            {
+                var knownBytes = Enumerable.Repeat(Convert.ToByte(0), blockSize).ToArray();
+                knownBytes[blockSize - 1] = testByte;
+                var plainBytes = knownBytes.ToList();
+                encryption = EncryptAes(plainBytes.ToArray(), key, CipherMode.ECB, PaddingMode.None);
+                var bruteForceBlock = new byte[16];
+                Array.Copy(encryption, 0, bruteForceBlock, 0, 16);
+                if (encryptedBlock.SequenceEqual(bruteForceBlock))
+                    break;
+                testByte++;
+            }
+            return testByte;
         }
 
         #endregion

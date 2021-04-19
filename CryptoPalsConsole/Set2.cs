@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 
 namespace CryptoPalsConsole
@@ -15,6 +17,8 @@ namespace CryptoPalsConsole
             Challenge10();
             Console.WriteLine();
             Challenge11();
+            Console.WriteLine();
+            Challenge12();
         }
 
         #region Chgallenges
@@ -53,7 +57,7 @@ namespace CryptoPalsConsole
             var dataText = File.ReadAllText("Set2Challenge11.txt").Replace("\r","").Replace("\n", "");
             int failCount = 0;
             int succesCount = 0;
-            for (int i = 0; i < 1000; i++)
+            for (int i = 0; i < 1; i++)
             {
                 var dataBytes = Conversion.AsciiToBytes(dataText);
                 byte[] encryption;
@@ -90,10 +94,32 @@ namespace CryptoPalsConsole
             }
 
             Console.WriteLine($"Success count: {succesCount}");
-            Console.WriteLine($"fail count: {failCount}");
-
+            Console.WriteLine($"Fail count: {failCount}");
         }
 
+        public void Challenge12()
+        {
+            Console.WriteLine("Challenge 12");
+            var key = CryptoMethods.RandomBytes(16);
+            var unknownBytes = Conversion.Base64StringToBytes("Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkgaGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBqdXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUgYnkK");
+            var knownText = "YoooooooooooooooYooooooooooooooo";
+            var knownBytes = Conversion.AsciiToBytes(knownText);
+            var plainBytes = knownBytes.ToList();
+            plainBytes.AddRange(unknownBytes);
+            byte[] encryption;
+            var blockSize = CryptoMethods.GetAesEncryptionBlockSize(plainBytes.ToArray(), key, out encryption);
+            byte[] mostRepeatedBlock;
+            int maxRepeated = CryptoMethods.NumberOfRepeatedBlocks(encryption, out mostRepeatedBlock);
+            File.WriteAllBytes("EBCencryption.bin", encryption);
+            if(maxRepeated >= 1)
+            {
+                Console.WriteLine("ECB Mode");
+            }
+            unknownBytes = CryptoMethods.PKCS7Padding(unknownBytes, 16);
+            var unknownByteBlocks = CryptoMethods.BreakIntoBlocks(unknownBytes, blockSize);
+            var decrypted = CryptoMethods.BruteForceAesECBEncryption(unknownByteBlocks, key, blockSize);
+            Console.WriteLine(Conversion.BytesToAsciiString(decrypted));
+        }
         #endregion
     }
 }
