@@ -19,9 +19,11 @@ namespace CryptoPalsConsole
             Challenge11();
             Console.WriteLine();
             Challenge12();
+            Console.WriteLine();
+            Challenge13();
         }
 
-        #region Chgallenges
+        #region Challenges
 
         public void Challenge9()
         {
@@ -120,6 +122,42 @@ namespace CryptoPalsConsole
             var decrypted = CryptoMethods.BruteForceAesECBEncryption(unknownByteBlocks, key, blockSize);
             Console.WriteLine(Conversion.BytesToAsciiString(decrypted));
         }
+
+        public void Challenge13()
+        {
+            Console.WriteLine("Challenge 13");
+            CryptoMethods.EqualsParser("foo=bar&baz=qux&zap=zazzle");
+            var key = CryptoMethods.RandomBytes(16);
+            var encodedProfile = CryptoMethods.Profile_For("danderle");
+            var plainBytes = Conversion.AsciiToBytes(encodedProfile);
+            var paddedBytes = CryptoMethods.PKCS7Padding(plainBytes, 16);
+            var encryption = CryptoMethods.EncryptAes(paddedBytes, key, CipherMode.ECB, PaddingMode.None);
+            var decryption = CryptoMethods.DecryptAes(encryption, key, CipherMode.ECB, PaddingMode.None);
+            decryption = CryptoMethods.RemovePkcsPadding(decryption);
+            var decrytedString = Conversion.BytesToAsciiString(decryption);
+            CryptoMethods.EqualsParser(decrytedString);
+            Console.WriteLine("Test completed");
+
+            string email1 = "danderle@mail";
+            string email2 = "AAAAAAAAAA";
+            var email2Bytes = Conversion.AsciiToBytes(email2).ToList();
+            email2Bytes.AddRange(CryptoMethods.PKCS7Padding(Conversion.AsciiToBytes("admin"), 16));
+            var encryption1 = CryptoMethods.EncryptedProfile_For(email1, key);
+            var paddedemail2 = CryptoMethods.PKCS7Padding(Conversion.AsciiToBytes(email2), 16);
+            email2Bytes.AddRange(paddedemail2);
+            var encryption2 = CryptoMethods.EncryptedProfile_For(Conversion.BytesToAsciiString(email2Bytes.ToArray()), key).ToList();
+
+            var customEncryption = encryption1.ToList();
+            customEncryption.RemoveRange(customEncryption.Count - 16, 16);
+            customEncryption.AddRange(encryption2.GetRange(16,16));
+            
+            decryption = CryptoMethods.DecryptAes(customEncryption.ToArray(), key, CipherMode.ECB, PaddingMode.None);
+            decryption = CryptoMethods.RemovePkcsPadding(decryption);
+            decrytedString = Conversion.BytesToAsciiString(decryption.ToArray());
+            Console.WriteLine(decrytedString);
+            CryptoMethods.EqualsParser(decrytedString);
+        }
+
         #endregion
     }
 }

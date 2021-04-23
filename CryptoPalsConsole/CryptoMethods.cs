@@ -456,7 +456,7 @@ namespace CryptoPalsConsole
             }
             else
             {
-                paddingNumber = blockSize % dataLength;
+                paddingNumber = blockSize - dataLength;
             }
             padded.AddRange(dataToPad);
             byte[] padding = new byte[paddingNumber];
@@ -468,6 +468,55 @@ namespace CryptoPalsConsole
 
             return padded.ToArray();
         }
+
+        public static byte[] RemovePkcsPadding(byte[] data)
+        {
+            int length = data[data.Length - 1];
+            if(length > 15)
+            {
+                return data;
+            }
+
+            byte[] dataNoPadding = new byte[data.Length - length];
+            Array.Copy(data, 0, dataNoPadding, 0, dataNoPadding.Length);
+            return dataNoPadding;
+        }
+        #endregion
+
+        #region Parsing
+
+        public static void EqualsParser(string encoding)
+        {
+            var items = encoding.Split('&');
+            string printItems = "";
+            Console.WriteLine("{");
+            foreach(var item in items)
+            {
+                var subItems = item.Split('=');
+                printItems += string.Format($"\t{subItems[0]}: \'{subItems[1]}\',\n");
+            }
+            printItems = printItems.Remove(printItems.Length-2, 2);
+            Console.WriteLine(printItems);
+            Console.WriteLine("}");
+        }
+
+        public static string Profile_For(string email)
+        {
+            int uid = 10;
+            string role = "user";
+            email = email.Replace("&", "").Replace("=", "");
+            return string.Format($"email={email}&uid={uid}&role={role}");
+        }
+
+        public static byte[] EncryptedProfile_For(string email, byte[] key)
+        {
+            var encoded = Profile_For(email);
+            var plainBytes = Conversion.AsciiToBytes(encoded);
+            var paddedBytes = PKCS7Padding(plainBytes, 16);
+            var encryption = EncryptAes(paddedBytes, key, CipherMode.ECB, PaddingMode.None);
+            return encryption;
+        }
+
         #endregion
 
         #region Helper Methods
