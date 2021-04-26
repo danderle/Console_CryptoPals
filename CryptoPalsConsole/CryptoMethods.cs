@@ -177,6 +177,22 @@ namespace CryptoPalsConsole
             return mostMatches;
         }
 
+        public static int GetIndexOfLastRepeated(byte[] data, byte[] blockToSearch)
+        {
+            int searchLength = blockToSearch.Length;
+            int index = data.Length - 1 - searchLength;
+            bool found = false;
+            while (index >= 0 && !found)
+            {
+                if (blockToSearch.SequenceEqual(data.ToList().GetRange(index, blockToSearch.Length)))
+                {
+                    found = true;
+                    continue;
+                }
+                index--;
+            }
+            return index + searchLength + 1;
+        }
         #endregion
 
         #region Aes

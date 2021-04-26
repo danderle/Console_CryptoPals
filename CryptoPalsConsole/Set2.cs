@@ -21,6 +21,8 @@ namespace CryptoPalsConsole
             Challenge12();
             Console.WriteLine();
             Challenge13();
+            Console.WriteLine();
+            Challenge14();
         }
 
         #region Challenges
@@ -158,6 +160,44 @@ namespace CryptoPalsConsole
             CryptoMethods.EqualsParser(decrytedString);
         }
 
+        public void Challenge14()
+        {
+            Console.WriteLine("Challenge 14");
+            var rand = new Random();
+            var numberOfRandomBytes = rand.Next(5, 1024);
+            var randomBytes = CryptoMethods.RandomBytes(numberOfRandomBytes).ToList();
+            var key = CryptoMethods.RandomBytes(16);
+            var unknownBytes = Conversion.Base64StringToBytes("Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkgaGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBqdXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUgYnkK");
+            var knownText = "YoooooooooooooooYooooooooooooooo";
+            var knownBytes = Conversion.AsciiToBytes(knownText);
+            var plainBytes = randomBytes;
+            plainBytes.AddRange(knownBytes);
+            plainBytes.AddRange(unknownBytes);
+
+            int maxRepeated = 0;
+            int bytesInserted = 0;
+            int blockSize = 0;
+            byte[] encryption = null;
+            byte[] mostRepeatedBlock = null;
+            while (maxRepeated < 1)
+            {
+                blockSize = CryptoMethods.GetAesEncryptionBlockSize(plainBytes.ToArray(), key, out encryption);
+                maxRepeated = CryptoMethods.NumberOfRepeatedBlocks(encryption, out mostRepeatedBlock);
+                File.WriteAllBytes("EBCencryption.bin", encryption);
+                plainBytes.Insert(0, 0);
+                bytesInserted++;
+            }
+            Console.WriteLine($"ECB Mode identified by prepending {bytesInserted} bytes");
+            var index = CryptoMethods.GetIndexOfLastRepeated(encryption, mostRepeatedBlock);
+
+            unknownBytes = CryptoMethods.PKCS7Padding(plainBytes.ToArray(), 16);
+            var unknownByteBlocks = CryptoMethods.BreakIntoBlocks(unknownBytes, blockSize);
+            var decrypted = CryptoMethods.BruteForceAesECBEncryption(unknownByteBlocks, key, blockSize).ToList();
+            decrypted.RemoveRange(0, index+17);
+            Console.WriteLine($"Removed prepended random bytes: 0 - {index}");
+            var plain = CryptoMethods.RemovePkcsPadding(decrypted.ToArray());
+            Console.WriteLine(Conversion.BytesToAsciiString(plain));
+        }
         #endregion
     }
 }
