@@ -23,6 +23,8 @@ namespace CryptoPalsConsole
             Challenge13();
             Console.WriteLine();
             Challenge14();
+            Console.WriteLine();
+            Challenge15();
         }
 
         #region Challenges
@@ -197,6 +199,57 @@ namespace CryptoPalsConsole
             Console.WriteLine($"Removed prepended random bytes: 0 - {index}");
             var plain = CryptoMethods.RemovePkcsPadding(decrypted.ToArray());
             Console.WriteLine(Conversion.BytesToAsciiString(plain));
+        }
+
+
+        public void Challenge15()
+        {
+            Console.WriteLine("Challenge 15");
+
+            string test = "ICE ICE BABAY";
+            var testBytes = Conversion.AsciiToBytes(test).ToList();
+            byte[] padding = { 4, 4, 4, 4 };
+            testBytes.AddRange(padding);
+            byte[] noPadding;
+            string result = string.Empty;
+            try
+            {
+                noPadding = CryptoMethods.RemovePkcsPadding(testBytes.ToArray());
+                result = Conversion.BytesToAsciiString(noPadding);
+            }
+            catch(InvalidDataException ex)
+            {
+                result = ex.Message;
+            }
+            Console.WriteLine(result);
+            test = "ICE ICE BABAY";
+            testBytes = Conversion.AsciiToBytes(test).ToList();
+            padding = new byte[]{ 5, 5, 5, 5};
+            testBytes.AddRange(padding);
+            try
+            {
+                noPadding = CryptoMethods.RemovePkcsPadding(testBytes.ToArray());
+                result = Conversion.BytesToAsciiString(noPadding);
+            }
+            catch (InvalidDataException ex)
+            {
+                result = ex.Message;
+            }
+            Console.WriteLine(result);
+            test = "ICE ICE BABAY1234";
+            testBytes = Conversion.AsciiToBytes(test).ToList();
+            padding = new byte[]{1,2,3,4};
+            testBytes.AddRange(padding);
+            try
+            {
+                noPadding = CryptoMethods.RemovePkcsPadding(testBytes.ToArray());
+                result = Conversion.BytesToAsciiString(noPadding);
+            }
+            catch (InvalidDataException ex)
+            {
+                result = ex.Message;
+            }
+            Console.WriteLine(result);
         }
         #endregion
     }

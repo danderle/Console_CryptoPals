@@ -492,6 +492,14 @@ namespace CryptoPalsConsole
             {
                 return data;
             }
+            int index = data.Length - length;
+            for (; index < data.Length; index++)
+            {
+                if(data[index] != length)
+                {
+                    throw new InvalidDataException("Invalid PKCS#7 padding");
+                }
+            }
 
             byte[] dataNoPadding = new byte[data.Length - length];
             Array.Copy(data, 0, dataNoPadding, 0, dataNoPadding.Length);
