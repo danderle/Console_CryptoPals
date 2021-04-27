@@ -25,6 +25,8 @@ namespace CryptoPalsConsole
             Challenge14();
             Console.WriteLine();
             Challenge15();
+            Console.WriteLine();
+            Challenge16();
         }
 
         #region Challenges
@@ -39,7 +41,6 @@ namespace CryptoPalsConsole
 
             CheckResult(result, expected);
         }
-
 
         public void Challenge10()
         {
@@ -201,7 +202,6 @@ namespace CryptoPalsConsole
             Console.WriteLine(Conversion.BytesToAsciiString(plain));
         }
 
-
         public void Challenge15()
         {
             Console.WriteLine("Challenge 15");
@@ -251,6 +251,52 @@ namespace CryptoPalsConsole
             }
             Console.WriteLine(result);
         }
+
+        public void Challenge16()
+        {
+            Console.WriteLine("Challenge 16");
+
+            var key = CryptoMethods.RandomBytes(16);
+            var iv = CryptoMethods.RandomBytes(16);
+            var someString = "AAAAAAAAAAAAAAAA";
+            var toEncode = "AadminAtrueA";
+            var encoded = EncodeString(someString + toEncode);
+            var encodedBytes = Conversion.AsciiToBytes(encoded);
+            var encrypted = CryptoMethods.EncryptAesCBC(encodedBytes, key, iv);
+            encrypted[32] = CryptoMethods.Xor(CryptoMethods.Xor(encrypted[32], Conversion.AsciiToBytes("A")[0]), Conversion.AsciiToBytes(";")[0]);
+            encrypted[38] = CryptoMethods.Xor(CryptoMethods.Xor(encrypted[38], Conversion.AsciiToBytes("A")[0]), Conversion.AsciiToBytes("=")[0]);
+            encrypted[43] = CryptoMethods.Xor(CryptoMethods.Xor(encrypted[43], Conversion.AsciiToBytes("A")[0]), Conversion.AsciiToBytes(";")[0]);
+            Console.WriteLine(Conversion.BytesToAsciiString(encrypted));
+            var decrypted = CryptoMethods.DecryptAesCBC(encrypted, key, iv);
+            var some = decrypted.ToList();
+            some.RemoveRange(32, 16);
+            decrypted = some.ToArray();
+            decrypted = CryptoMethods.RemovePkcsPadding(decrypted);
+            var plain = Conversion.BytesToAsciiString(decrypted);
+            if(plain.Contains(";admin=true;"))
+            {
+                Console.WriteLine("Success!!");
+                Console.WriteLine(plain);
+            }
+            else
+            {
+                Console.WriteLine("Fail!!");
+                Console.WriteLine(plain);
+            }
+        }
+
+        #endregion
+
+        #region Helpers
+
+        private string EncodeString(string someText)
+        {
+            someText = someText.Replace(";", "%3b").Replace("=", "%3d");
+            var first = "comment1=cooking%20MCs;userdata=";
+            var second = ";comment2=%20like%20a%20pound%20of%20bacon";
+            return first + someText + second;
+        }
+
         #endregion
     }
 }
